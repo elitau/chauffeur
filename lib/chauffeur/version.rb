@@ -1,0 +1,3 @@
+module Chauffeur
+  VERSION = "0.0.1"
+end
