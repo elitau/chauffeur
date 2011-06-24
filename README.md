@@ -50,6 +50,12 @@ More examples on the wiki: <http://wiki.github.com/elitau/chauffeur/instructions
  - write your config/schedule.rb
  - on deployment with capistrano the jobs will be pushed (async) to jenkins over its API
  
+### TODOs
+ - read schedule.rb
+ - convert schedule.rb task to jenkins config files
+ - push jenkins config files to a jenkins server
+ - setup a Vagrant VM with jenkins to test pushes
+ - 
 
 ### License
 
