@@ -19,6 +19,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   
   s.add_runtime_dependency(%q<aaronh-chronic>, [">= 0.3.9"])
+  s.add_runtime_dependency(%q<jenkins>, [">= 0.6.5"])
   s.add_runtime_dependency(%q<activesupport>, [">= 2.3.4"])
   s.add_development_dependency "rspec", "~> 2.6"
 end
