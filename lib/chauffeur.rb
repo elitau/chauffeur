@@ -1,9 +1,9 @@
 require "chauffeur/version"
 
 module Chauffeur
-  autoload :JobList,     'chauffeur/job_list'
-  autoload :Job,         'chauffeur/job'
-  autoload :CommandLine, 'chauffeur/command_line'
+  autoload :JobConfigList, 'chauffeur/job_config_list'
+  autoload :Job,           'chauffeur/job'
+  autoload :CommandLine,   'chauffeur/command_line'
   
   # module Output
   #   autoload :Cron,        'chauffeur/cron'

@@ -17,7 +17,7 @@ OptionParser.new do |opts|
      options[:write] = true
      options[:identifier] = identifier if identifier
   end
-  opts.on('-c', '--list-jenkins [identifier]') do |identifier|
+  opts.on('-l', '--list-jenkins [identifier]') do |identifier|
     options[:list] = true
     options[:identifier] = identifier if identifier
   end

@@ -1,7 +1,6 @@
 module Chauffeur
   class JobConfigList
     include Enumerable
-    delegate :each, :to => :job_configs
     
     def initialize(options)
       @jobs, @env, @set_variables = {}, {}, {}
@@ -47,12 +46,48 @@ module Chauffeur
           # options[:output] = @output if defined?(@output) && !options.has_key?(:output)
           
           @jobs[@current_time_scope] ||= []
-          @jobs[@current_time_scope] << Chauffeur::Job.new(@options.merge(@set_variables).merge(options))
+          @jobs[@current_time_scope] << Chauffeur::Job.new(@current_time_scope, @options.merge(@set_variables).merge(options))
         end
       end
     end
+    
+    def each_name_and_job_config(&block)
+      return if @jobs.empty?
+      
+      @jobs.each do |time, jobs|
+        jobs.each do |job|
+          
+          
+          yield name, create_jenkins_config(job, options)
+          
+          # Chauffeur::Output::Jenkins.output(time, job) do |cron|
+          #   cron << "\n\n"
+          #   
+          #   if cron.starts_with?("@")
+          #     shortcut_jobs << cron
+          #   else
+          #     regular_jobs << cron
+          #   end
+          # end
+        end
+      end
+
+      # shortcut_jobs.join + combine(regular_jobs).join
+    end
         
   private
+    
+    def create_jenkins_config(job, options)
+      # template = options[:template] || 'ruby'
+      options = {
+        :override => true,
+      }.merge(options)
+      # template = options[:"no-template"] ? 'none' : options[:template]
+      job_config = Chauffeur::JenkinsJobConfigBuilder.new(job) do |c|
+        
+      end
+    end
+    
     
     #
     # Takes a string like: "variable1=something&variable2=somethingelse"
@@ -112,27 +147,5 @@ module Chauffeur
       entries.map { |entry| entry.join(' ') }
     end
 
-    def job_configs
-      return if @jobs.empty?
-      
-      configs = {}
-      
-      @jobs.each do |time, jobs|
-        jobs.each do |job|
-          Chauffeur::JobConfig.new()
-          Chauffeur::Output::Jenkins.output(time, job) do |cron|
-            cron << "\n\n"
-            
-            if cron.starts_with?("@")
-              shortcut_jobs << cron
-            else
-              regular_jobs << cron
-            end
-          end
-        end
-      end
-
-      shortcut_jobs.join + combine(regular_jobs).join
-    end
   end
 end

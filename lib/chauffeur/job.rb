@@ -1,12 +1,16 @@
 module Chauffeur
   class Job
+    CRON_REGEX = /^.+ .+ .+ .+ .+.?$/
+    
     attr_reader :at
     attr_reader :name
+    attr_reader :time
     
-    def initialize(options = {})
+    def initialize(time, options = {})
+      @time    = time
       @options = options
       @name                    = options[:task]
-      @at                      = options.delete(:at)
+      @at                      = (at = options.delete(:at).is_a?(String)) ? (Chronic.parse(at) || 0) : (at || 0)
       @template                = options.delete(:template)
       @job_template            = options.delete(:job_template) || ":job"
       # @options[:output]        = Chauffeur::Output::Redirection.new(options[:output]).to_s if options.has_key?(:output)
@@ -20,7 +24,83 @@ module Chauffeur
     end
     
   protected
-  
+    
+    def time_in_jenkins_syntax
+      case @time
+        when CRON_REGEX then @time # raw cron sytax given
+        # when Symbol then parse_symbol
+        # when String then parse_as_string
+        else 
+          raise 'Not yet implemented'
+          # parse_time
+      end
+    end
+    
+    def parse_symbol
+      shortcut = case @at
+        when :reboot   then '@reboot'
+        when :year     then 12.months
+        when :yearly, 
+             :annually then '@annually'
+        when :day      then 1.day
+        when :daily    then '@daily'
+        when :midnight then '@midnight'
+        when :month    then 1.month
+        when :monthly  then '@monthly'
+        when :week     then 1.week
+        when :weekly   then '@weekly'
+        when :hour     then 1.hour
+        when :hourly   then '@hourly'
+      end
+    end
+    
+    def parse_as_string
+      return unless @time
+      string = @time.to_s
+
+      timing = Array.new(4, '*')
+      timing[0] = @at.is_a?(Time) ? @at.min  : 0
+      timing[1] = @at.is_a?(Time) ? @at.hour : 0
+
+      return (timing << '1-5') * " " if string.downcase.index('weekday')
+      return (timing << '6,0') * " " if string.downcase.index('weekend')
+
+      %w(sun mon tue wed thu fri sat).each_with_index do |day, i|
+        return (timing << i) * " " if string.downcase.index(day)
+      end
+
+      raise ArgumentError, "Couldn't parse: #{@time}"
+    end
+    
+    def parse_time
+      timing = Array.new(5, '*')
+      case @time
+        when 0.seconds...1.minute
+          raise ArgumentError, "Time must be in minutes or higher"
+        when 1.minute...1.hour
+          minute_frequency = @time / 60
+          timing[0] = comma_separated_timing(minute_frequency, 59, @at || 0)
+        when 1.hour...1.day
+          hour_frequency = (@time / 60 / 60).round
+          timing[0] = @at.is_a?(Time) ? @at.min : @at
+          timing[1] = comma_separated_timing(hour_frequency, 23)
+        when 1.day...1.month
+          day_frequency = (@time / 24 / 60 / 60).round
+          timing[0] = @at.is_a?(Time) ? @at.min  : 0
+          timing[1] = @at.is_a?(Time) ? @at.hour : @at
+          timing[2] = comma_separated_timing(day_frequency, 31, 1)
+        when 1.month..12.months
+          month_frequency = (@time / 30  / 24 / 60 / 60).round
+          timing[0] = @at.is_a?(Time) ? @at.min  : 0
+          timing[1] = @at.is_a?(Time) ? @at.hour : 0
+          timing[2] = @at.is_a?(Time) ? @at.day  : (@at.zero? ? 1 : @at)
+          timing[3] = comma_separated_timing(month_frequency, 12, 1)
+        else
+          return parse_as_string
+      end
+      timing.join(' ')
+    end
+    
     def process_template(template, options)
       template.gsub(/:\w+/) do |key|
         before_and_after = [$`[-1..-1], $'[0..0]]
@@ -46,20 +126,6 @@ module Chauffeur
     # method_option :"public-scm", :desc    => "use public scm URL", :type => :boolean, :default => false
     # method_option :template, :desc        => "template of job steps (available: #{JobConfigBuilder::VALID_JOB_TEMPLATES.join ','})", :default => 'ruby'
     # method_option :"no-template", :desc   => "do not use a template of default steps; avoids Gemfile requirement", :type => :boolean, :default => false
-    
-    def create_jenkins_config(job_template, options)
-      # template = options[:template] || 'ruby'
-      options = {:override => true}.merge(options)
-      # template = options[:"no-template"] ? 'none' : options[:template]
-      job_config = Jenkins::JobConfigBuilder.new do |c|
-        c.rubies        = options[:rubies].split(/\s*,\s*/) if options[:rubies]
-        c.node_labels   = options[:"node-labels"].split(/\s*,\s*/) if options[:"node-labels"]
-        # c.scm           = scm.url
-        # c.scm_branches  = options[:"scm-branches"].split(/\s*,\s*/)
-        c.assigned_node = options[:"assigned-node"] if options[:"assigned-node"]
-        c.public_scm    = options[:"public-scm"]
-      end
-    end
     
     def escape_single_quotes(str)
       str.gsub(/'/) { "'\\''" }

@@ -30,8 +30,8 @@ module Chauffeur
       elsif @options[:write]
         write_crontab(whenever_cron)
       else
-        puts Chauffeur.cron(@options)
-        puts "## [message] Above is your schedule file converted to cron syntax; your crontab file was not updated."
+        puts Chauffeur.job_cofigurations(@options).map(&:to_xml).join("\n\n")
+        puts "## [message] Above are your jenkins cofigurations as xml; the server was not updated."
         puts "## [message] Run `whenever --help' for more options."
         exit(0)
       end
